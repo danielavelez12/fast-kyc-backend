@@ -129,10 +129,30 @@ async def web_search(user_data):
 async def email(update: Update, context: CallbackContext) -> int:
     context.user_data['email'] = update.message.text
     update_email(context.user_data['account_id'], context.user_data['email'])
+    
     api_key = os.getenv('ABSTRACT_API_KEY')
-    response = requests.get("https://emailvalidation.abstractapi.com/v1/?api_key={0}&email={1}".format(api_key, context.user_data['email']))
-    print(response.status_code)
-    print(response.content)
+    response = requests.get(f"https://emailvalidation.abstractapi.com/v1/?api_key={api_key}&email={context.user_data['email']}")
+    
+    if response.status_code != 200:
+        await update.message.reply_text("There was an error validating your email. Please try again.")
+        return EMAIL
+
+    email_data = response.json()
+    
+    # Check email validation fields
+    if not email_data['is_valid_format']['value'] or not email_data['is_mx_found']['value'] or not email_data['is_smtp_valid']['value']:
+        await update.message.reply_text("Oops! Looks like this email is invalid. Please provide a valid email address.")
+        return EMAIL
+    
+    if email_data['deliverability'] == "UNDELIVERABLE":
+        await update.message.reply_text("We see that the email address is undeliverable. Please provide a valid email address to ensure you can receive our communications!")
+        return EMAIL
+    
+    if email_data['is_disposable_email']['value']:
+        await update.message.reply_text("Sorry, disposable email addresses are not allowed. Please provide a valid email address.")
+        return EMAIL
+    
+    # If all checks pass, proceed to the next step
     await update.message.reply_text("Got it. Next, please provide your SSN. We'll encrypt it for security.")
     return SSN
 
