@@ -6,6 +6,7 @@ from telegram.ext import (
     ConversationHandler, CallbackContext
 )
 from dotenv import load_dotenv
+from db import create_new_account, update_name, update_address, update_email, update_ssn
 
 # Load environment variables from .env file
 load_dotenv()
@@ -25,29 +26,34 @@ async def start(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text(
         'Hi! I am going to collect some information from you.\n\nWhat is your name?'
     )
+    context.user_data['account_id'] = create_new_account()
     return NAME
 
 # Define the name handler
 async def name(update: Update, context: CallbackContext) -> int:
     context.user_data['name'] = update.message.text
+    update_name(context.user_data['account_id'], context.user_data['name'])
     await update.message.reply_text('What is your address?')
     return ADDRESS
 
 # Define the address handler
 async def address(update: Update, context: CallbackContext) -> int:
     context.user_data['address'] = update.message.text
+    update_address(context.user_data['account_id'], context.user_data['address'])
     await update.message.reply_text('What is your email?')
     return EMAIL
 
 # Define the email handler
 async def email(update: Update, context: CallbackContext) -> int:
     context.user_data['email'] = update.message.text
+    update_email(context.user_data['account_id'], context.user_data['email'])
     await update.message.reply_text('What is your SSN?')
     return SSN
 
 # Define the SSN handler
 async def ssn(update: Update, context: CallbackContext) -> int:
     context.user_data['ssn'] = update.message.text
+    update_ssn(context.user_data['account_id'], context.user_data['ssn'])
     await update.message.reply_text('Please send a photo of your ID document.')
     return ID_DOCUMENT
 

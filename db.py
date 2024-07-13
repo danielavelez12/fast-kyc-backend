@@ -6,9 +6,30 @@ firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
-
-def add_document():
+def create_new_account():
     doc_ref = db.collection('accounts').add({})
-    print("Document added successfully.")
+    print("New account created with id {0}.".format(doc_ref[1].id))
+    return doc_ref[1].id
 
-add_document()
+def update_name(account_id, name):
+    db.collection('accounts').document(account_id).update({'name': name})
+    print("Name updated for account {0} to {1}.".format(account_id, name))
+
+def update_address(account_id, address):
+    db.collection('accounts').document(account_id).update({'address': address})
+    print("Address updated for account {0} to {1}.".format(account_id, address))
+
+def update_email(account_id, email):
+    db.collection('accounts').document(account_id).update({'email': email})
+    print("Email updated for account {0} to {1}.".format(account_id, email))
+
+def update_ssn(account_id, ssn):
+    db.collection('accounts').document(account_id).update({'ssn': ssn})
+    print("SSN updated for account {0} to {1}.".format(account_id, ssn))
+
+# Tests:
+# account_id = create_new_account()
+# update_name(account_id, 'Sayak')
+# update_address(account_id, 'Kolkata')
+# update_email(account_id, 'sayak@gmail.com')
+# update_ssn(account_id, '123456789')
