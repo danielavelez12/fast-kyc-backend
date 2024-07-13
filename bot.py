@@ -225,7 +225,7 @@ if __name__ == '__main__':
 #   },
 #   "provider_config": {
 #     "provider": "openai",
-#     "apiKey": "sk-None-vS43HkXhRNGVc6rPdgD3T3BlbkFJvZUFLCwDewjjLTovNL7T"
+#     "apiKey": ""
 #   },
 #   "model_config": {
 #     "model": "gpt-4",
@@ -250,7 +250,7 @@ if __name__ == '__main__':
 #   ],
 #   "headless": true,
 #   "hdr_config": {
-#     "apikey": "hdr-1CBgVVt9zkd6RMaPgp3z9NSf9SmgTlGo",
+#     "apikey": "",
 #     "endpoint": "https://api.hdr.is"
 #   }
 # }'
