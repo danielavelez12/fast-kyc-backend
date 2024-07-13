@@ -1,5 +1,5 @@
 # Ignore the credentials JSON file
-path/to/your-service-account-file.json
+credentials.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
