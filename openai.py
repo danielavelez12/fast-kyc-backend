@@ -26,19 +26,61 @@ def query_openai_with_image(base64_image, model="gpt-4o", max_tokens=300):
     
     payload = {
         "model": model,
-        "response_format"={ "type": "json_object" },
-
+        "response_format":{ "type": "json_object" },
         "messages": [
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": """What’s in this image? 
-                            Return a field of user_data with the following fields:
-                                date_of_birth, expiration_date, sex, issue_date, id_number, first_name, last_name, address.
-                            Also return the following boolean fields: 
-                            """
+                        "text": """Please process this image and output the following JSON: 
+                        "data": {
+                        "type": "object",
+                        "properties": {
+                            "idNumber": {
+                            "type": "string"
+                            },
+                            "name": {
+                            "type": "string"
+                            },
+                            "birthdate": {
+                            "type": "string"
+                            },
+                            "sex": {
+                            "type": "string"
+                            },
+                            "address": {
+                            "type": "string"
+                            }
+                        },
+                        "required": ["idNumber", "name", "birthdate", "sex", "address"]
+                        },
+                        "checks": {
+                        "type": "object",
+                        "properties": {
+                            "expired": {
+                            "type": "boolean"
+                            },
+                            "electronicReplica": {
+                            "type": "boolean"
+                            },
+                            "fabrication": {
+                            "type": "boolean"
+                            },
+                            "portraitClarity": {
+                            "type": "boolean"
+                            },
+                            "idImageTampering": {
+                            "type": "boolean"
+                            },
+                            "validDates": {
+                            "type": "boolean"
+                            },
+                            "paperDetection": {
+                            "type": "boolean"
+                            }
+                        }
+                        """
                     },
                     {
                         "type": "image_url",
