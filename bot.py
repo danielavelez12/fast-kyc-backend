@@ -11,6 +11,7 @@ from helpers import encode_image
 from openai import query_openai_with_image
 import asyncio
 import aiohttp
+import requests
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,17 +29,10 @@ NAME, ADDRESS, EMAIL, SSN, ID_DOCUMENT = range(5)
 # Define the start command handler
 async def start(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text(
-        'Hi! I am going to collect some information from you.\n\nWhat is your name?'
+        "Hi! I'll be your onboarding buddy for today. What's your email?"
     )
     context.user_data['account_id'] = create_new_account()
-    return NAME
-
-# Define the name handler
-async def name(update: Update, context: CallbackContext) -> int:
-    context.user_data['name'] = update.message.text
-    update_name(context.user_data['account_id'], context.user_data['name'])
-    await update.message.reply_text('What is your address?')
-    return ADDRESS
+    return EMAIL
 
 # Define the address handler
 async def address(update: Update, context: CallbackContext) -> int:
@@ -135,14 +129,18 @@ async def web_search(user_data):
 async def email(update: Update, context: CallbackContext) -> int:
     context.user_data['email'] = update.message.text
     update_email(context.user_data['account_id'], context.user_data['email'])
-    await update.message.reply_text('What is your SSN?')
+    api_key = os.getenv('ABSTRACT_API_KEY')
+    response = requests.get("https://emailvalidation.abstractapi.com/v1/?api_key={0}&email={1}".format(api_key, context.user_data['email']))
+    print(response.status_code)
+    print(response.content)
+    await update.message.reply_text("Got it. Next, please provide your SSN. We'll encrypt it for security.")
     return SSN
 
 # Define the SSN handler
 async def ssn(update: Update, context: CallbackContext) -> int:
     context.user_data['ssn'] = update.message.text
     update_ssn(context.user_data['account_id'], context.user_data['ssn'])
-    await update.message.reply_text('Please send a photo of your ID document.')
+    await update.message.reply_text('Great! Please send a photo of your ID document.')
     return ID_DOCUMENT
 
 # Define the ID document handler
@@ -162,8 +160,8 @@ async def id_document(update: Update, context: CallbackContext) -> int:
 
     await update.message.reply_text(
         'Thank you! Here is the information you provided:\n'
-        f"Name: {context.user_data['name']}\n"
-        f"Address: {context.user_data['address']}\n"
+        # f"Name: {context.user_data['name']}\n"
+        # f"Address: {context.user_data['address']}\n"
         f"Email: {context.user_data['email']}\n"
         f"SSN: {context.user_data['ssn']}\n"
         'ID Document: Saved'
@@ -190,8 +188,7 @@ def main() -> None:
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, name)],
-            ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, address)],
+            # ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, address)],
             EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, email)],
             SSN: [MessageHandler(filters.TEXT & ~filters.COMMAND, ssn)],
             ID_DOCUMENT: [MessageHandler(filters.PHOTO, id_document)]
