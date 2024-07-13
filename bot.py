@@ -12,6 +12,7 @@ from openai import query_openai_with_image
 import asyncio
 import aiohttp
 import requests
+from helpers import validate_ssn
 
 # Load environment variables from .env file
 load_dotenv()
@@ -29,10 +30,10 @@ NAME, ADDRESS, EMAIL, SSN, ID_DOCUMENT = range(5)
 # Define the start command handler
 async def start(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text(
-        "Hi! I'll be your onboarding buddy for today. What's your email?"
+        "Hi! I'll be your onboarding buddy for today. Please upload your ID document to start."
     )
     context.user_data['account_id'] = create_new_account()
-    return EMAIL
+    return ID_DOCUMENT
 
 # Define the address handler
 async def address(update: Update, context: CallbackContext) -> int:
@@ -160,8 +161,18 @@ async def email(update: Update, context: CallbackContext) -> int:
 async def ssn(update: Update, context: CallbackContext) -> int:
     context.user_data['ssn'] = update.message.text
     update_ssn(context.user_data['account_id'], context.user_data['ssn'])
-    await update.message.reply_text('Great! Please send a photo of your ID document.')
-    return ID_DOCUMENT
+    if not validate_ssn(context.user_data['ssn']):
+        await update.message.reply_text("Please provide a valid SSN.")
+        return SSN
+    await update.message.delete()
+    await update.message.reply_text(
+        "Thank you! We've hidden it for your privacy. Here is the information you provided:\n"
+        # f"Name: {context.user_data['name']}\n"
+        # f"Address: {context.user_data['address']}\n"
+        f"Email: {context.user_data['email']}\n"
+        'ID Document: Saved'
+    )
+    return ConversationHandler.END
 
 # Define the ID document handler
 async def id_document(update: Update, context: CallbackContext) -> int:
@@ -173,20 +184,11 @@ async def id_document(update: Update, context: CallbackContext) -> int:
         update_id(context.user_data['account_id'], file_url)
         # encoded_img = encode_image(photo_path)
         # response = query_openai_with_image(encoded_img)
-        await update.message.reply_text('Photo received and saved.')
+        await update.message.reply_text('ID document received! Please provide your email.')
+        return EMAIL
     else:
         await update.message.reply_text('Please send a photo of your ID document.')
         return ID_DOCUMENT
-
-    await update.message.reply_text(
-        'Thank you! Here is the information you provided:\n'
-        # f"Name: {context.user_data['name']}\n"
-        # f"Address: {context.user_data['address']}\n"
-        f"Email: {context.user_data['email']}\n"
-        f"SSN: {context.user_data['ssn']}\n"
-        'ID Document: Saved'
-    )
-    return ConversationHandler.END
 
 # Define the cancel handler
 async def cancel(update: Update, context: CallbackContext) -> int:
@@ -209,9 +211,9 @@ def main() -> None:
         entry_points=[CommandHandler('start', start)],
         states={
             # ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, address)],
+            ID_DOCUMENT: [MessageHandler(filters.PHOTO, id_document)],
             EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, email)],
             SSN: [MessageHandler(filters.TEXT & ~filters.COMMAND, ssn)],
-            ID_DOCUMENT: [MessageHandler(filters.PHOTO, id_document)]
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
