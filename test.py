@@ -6,7 +6,7 @@ from helpers import encode_image
 photo_path = "/Users/sayakmaity/fast-kyc-backend/7407996533_id_document.jpg"
 
 encoded_img = encode_image(photo_path)
-api_key = 'sk-proj-jyuGE23nydlWIzuKF04CT3BlbkFJMAIhGviGIh4PdlEnzppZ'
+api_key = os.environ['OPENAI_API_KEY']
 headers = {
     "Authorization": f"Bearer {api_key}",
     "Content-Type": "application/json"
