@@ -39,7 +39,7 @@ async def address(update: Update, context: CallbackContext) -> int:
     context.user_data['address'] = update.message.text
     update_address(context.user_data['account_id'], context.user_data['address'])
 
-    asyncio.create_task(post_name_and_address(context.user_data))
+    # asyncio.create_task(post_name_and_address(context.user_data))
     
     await update.message.reply_text('What is your email?')
     return EMAIL
@@ -143,6 +143,70 @@ async def ssn(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text('Great! Please send a photo of your ID document.')
     return ID_DOCUMENT
 
+
+async def process_id_document(photo_path, account_id):
+    """
+    Processes an ID document by encoding the image and querying the OpenAI API.
+    
+    Args:
+    - photo_path (str): Path to the photo file.
+    - account_id (str): The account ID associated with this document.
+    
+    Returns:
+    - dict: The JSON response from the OpenAI API.
+    """
+    encoded_img = encode_image(photo_path)
+    api_key = os.getenv('OPENAI_API_KEY')
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": "gpt-4o",
+        "response_format": { "type": "json_object" },
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": """Please process this image and output the following in JSON:
+
+                        idNumber (string)
+                        name (string)
+                        birthdate (string)
+                        sex (string)
+                        address (string)
+                        electronicReplicaOfID (boolean)
+                        paperReplicaOfID (boolean)
+                        pictureIsClear (boolean)
+                        idImageIsTampered (boolean)
+                        """
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{encoded_img}"
+                        }
+                    }
+                ]
+            }
+        ],
+        "max_tokens": 300
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload) as response:
+            result = await response.json()
+    
+    # Process the response here
+    print(result)
+    
+    # Update the user's data with the verification results
+    # This is a placeholder - implement according to your needs
+    # update_verification_results(account_id, result)
+    return result
 # Define the ID document handler
 async def id_document(update: Update, context: CallbackContext) -> int:
     if update.message.photo:
@@ -151,20 +215,20 @@ async def id_document(update: Update, context: CallbackContext) -> int:
         await photo_file.download_to_drive(photo_path)
         file_url = upload_file_to_storage(photo_path, os.path.basename(photo_path))
         update_id(context.user_data['account_id'], file_url)
-        # encoded_img = encode_image(photo_path)
-        # response = query_openai_with_image(encoded_img)
-        await update.message.reply_text('Photo received and saved.')
+        
+        # Start the ID verification process in the background
+        asyncio.create_task(process_id_document(photo_path, context.user_data['account_id']))
+        
+        await update.message.reply_text('Photo received and saved. ID verification is in progress.')
     else:
         await update.message.reply_text('Please send a photo of your ID document.')
         return ID_DOCUMENT
 
     await update.message.reply_text(
         'Thank you! Here is the information you provided:\n'
-        # f"Name: {context.user_data['name']}\n"
-        # f"Address: {context.user_data['address']}\n"
         f"Email: {context.user_data['email']}\n"
         f"SSN: {context.user_data['ssn']}\n"
-        'ID Document: Saved'
+        'ID Document: Saved and being processed'
     )
     return ConversationHandler.END
 
