@@ -44,7 +44,7 @@ def update_ssn(account_id, ssn):
 
 def update_id(account_id, file_url):
     db.collection('accounts').document(account_id).update({'id_': file_url})
-    print("ID document image updated for account {0} at url".format(account_id, file_url))
+    print("ID document image updated for account {0} at url {1}".format(account_id, file_url))
 
 # Tests:
 # account_id = create_new_account()

@@ -12,6 +12,7 @@ from openai import query_openai_with_image
 import asyncio
 import aiohttp
 import requests
+from helpers import validate_ssn
 
 # Load environment variables from .env file
 load_dotenv()
@@ -29,10 +30,10 @@ NAME, ADDRESS, EMAIL, SSN, ID_DOCUMENT = range(5)
 # Define the start command handler
 async def start(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text(
-        "Hi! I'll be your onboarding buddy for today. What's your email?"
+        "Hi! I'll be your onboarding buddy for today. Please upload your ID document to start."
     )
     context.user_data['account_id'] = create_new_account()
-    return EMAIL
+    return ID_DOCUMENT
 
 # Define the address handler
 async def address(update: Update, context: CallbackContext) -> int:
@@ -129,10 +130,30 @@ async def web_search(user_data):
 async def email(update: Update, context: CallbackContext) -> int:
     context.user_data['email'] = update.message.text
     update_email(context.user_data['account_id'], context.user_data['email'])
+    
     api_key = os.getenv('ABSTRACT_API_KEY')
-    response = requests.get("https://emailvalidation.abstractapi.com/v1/?api_key={0}&email={1}".format(api_key, context.user_data['email']))
-    print(response.status_code)
-    print(response.content)
+    response = requests.get(f"https://emailvalidation.abstractapi.com/v1/?api_key={api_key}&email={context.user_data['email']}")
+    
+    if response.status_code != 200:
+        await update.message.reply_text("There was an error validating your email. Please try again.")
+        return EMAIL
+
+    email_data = response.json()
+    
+    # Check email validation fields
+    if not email_data['is_valid_format']['value'] or not email_data['is_mx_found']['value'] or not email_data['is_smtp_valid']['value']:
+        await update.message.reply_text("Oops! Looks like this email is invalid. Please provide a valid email address.")
+        return EMAIL
+    
+    if email_data['deliverability'] == "UNDELIVERABLE":
+        await update.message.reply_text("We see that the email address is undeliverable. Please provide a valid email address to ensure you can receive our communications!")
+        return EMAIL
+    
+    if email_data['is_disposable_email']['value']:
+        await update.message.reply_text("Sorry, disposable email addresses are not allowed. Please provide a valid email address.")
+        return EMAIL
+    
+    # If all checks pass, proceed to the next step
     await update.message.reply_text("Got it. Next, please provide your SSN. We'll encrypt it for security.")
     return SSN
 
@@ -140,8 +161,18 @@ async def email(update: Update, context: CallbackContext) -> int:
 async def ssn(update: Update, context: CallbackContext) -> int:
     context.user_data['ssn'] = update.message.text
     update_ssn(context.user_data['account_id'], context.user_data['ssn'])
-    await update.message.reply_text('Great! Please send a photo of your ID document.')
-    return ID_DOCUMENT
+    if not validate_ssn(context.user_data['ssn']):
+        await update.message.reply_text("Please provide a valid SSN.")
+        return SSN
+    await update.message.delete()
+    await update.message.reply_text(
+        "Thank you! We've hidden it for your privacy. Here is the information you provided:\n"
+        # f"Name: {context.user_data['name']}\n"
+        # f"Address: {context.user_data['address']}\n"
+        f"Email: {context.user_data['email']}\n"
+        'ID Document: Saved'
+    )
+    return ConversationHandler.END
 
 
 async def process_id_document(photo_path, account_id):
@@ -219,18 +250,11 @@ async def id_document(update: Update, context: CallbackContext) -> int:
         # Start the ID verification process in the background
         asyncio.create_task(process_id_document(photo_path, context.user_data['account_id']))
         
-        await update.message.reply_text('Photo received and saved. ID verification is in progress.')
+        await update.message.reply_text('ID document received! Please provide your email.')
+        return EMAIL
     else:
         await update.message.reply_text('Please send a photo of your ID document.')
         return ID_DOCUMENT
-
-    await update.message.reply_text(
-        'Thank you! Here is the information you provided:\n'
-        f"Email: {context.user_data['email']}\n"
-        f"SSN: {context.user_data['ssn']}\n"
-        'ID Document: Saved and being processed'
-    )
-    return ConversationHandler.END
 
 # Define the cancel handler
 async def cancel(update: Update, context: CallbackContext) -> int:
@@ -253,9 +277,9 @@ def main() -> None:
         entry_points=[CommandHandler('start', start)],
         states={
             # ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, address)],
+            ID_DOCUMENT: [MessageHandler(filters.PHOTO, id_document)],
             EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, email)],
             SSN: [MessageHandler(filters.TEXT & ~filters.COMMAND, ssn)],
-            ID_DOCUMENT: [MessageHandler(filters.PHOTO, id_document)]
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
