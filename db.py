@@ -27,6 +27,10 @@ def update_ssn(account_id, ssn):
     db.collection('accounts').document(account_id).update({'ssn': ssn})
     print("SSN updated for account {0} to {1}.".format(account_id, ssn))
 
+def update_id(account_id, image):
+    db.collection('accounts').document(account_id).update({'encoded_id_img': image})
+    print("Encoded ID document image uploaded for account {0}.".format(account_id))
+
 # Tests:
 # account_id = create_new_account()
 # update_name(account_id, 'Sayak')

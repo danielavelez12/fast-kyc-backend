@@ -6,7 +6,9 @@ from telegram.ext import (
     ConversationHandler, CallbackContext
 )
 from dotenv import load_dotenv
-from db import create_new_account, update_name, update_address, update_email, update_ssn
+from db import create_new_account, update_name, update_address, update_email, update_ssn, update_id
+from helpers import encode_image
+from openai import query_openai_with_image
 
 # Load environment variables from .env file
 load_dotenv()
@@ -23,11 +25,13 @@ NAME, ADDRESS, EMAIL, SSN, ID_DOCUMENT = range(5)
 
 # Define the start command handler
 async def start(update: Update, context: CallbackContext) -> int:
-    await update.message.reply_text(
-        'Hi! I am going to collect some information from you.\n\nWhat is your name?'
-    )
-    context.user_data['account_id'] = create_new_account()
-    return NAME
+    # await update.message.reply_text(
+    #     'Hi! I am going to collect some information from you.\n\nWhat is your name?'
+    # )
+    await update.message.reply_text('Upload your document:')
+    # context.user_data['account_id'] = create_new_account()
+    # return NAME
+    return ID_DOCUMENT
 
 # Define the name handler
 async def name(update: Update, context: CallbackContext) -> int:
@@ -60,20 +64,26 @@ async def ssn(update: Update, context: CallbackContext) -> int:
 # Define the ID document handler
 async def id_document(update: Update, context: CallbackContext) -> int:
     if update.message.photo:
-        photo_file = update.message.photo[-1].get_file()
-        context.user_data['id_document'] = 'id_document.jpg'
+        photo_file = await update.message.photo[-1].get_file()
+        photo_path = f'{update.message.from_user.id}_id_document.jpg'
+        await photo_file.download_to_drive(photo_path)
+        encoded_img = encode_image(photo_path)
+        response = query_openai_with_image(encoded_img)
+        print(response)
+        context.user_data['id_document'] = photo_path
+        await update.message.reply_text('Photo received and saved.')
     else:
         await update.message.reply_text('Please send a photo of your ID document.')
         return ID_DOCUMENT
 
-    await update.message.reply_text(
-        'Thank you! Here is the information you provided:\n'
-        f"Name: {context.user_data['name']}\n"
-        f"Address: {context.user_data['address']}\n"
-        f"Email: {context.user_data['email']}\n"
-        f"SSN: {context.user_data['ssn']}\n"
-        'ID Document: Saved as id_document.jpg'
-    )
+    # await update.message.reply_text(
+    #     'Thank you! Here is the information you provided:\n'
+    #     f"Name: {context.user_data['name']}\n"
+    #     f"Address: {context.user_data['address']}\n"
+    #     f"Email: {context.user_data['email']}\n"
+    #     f"SSN: {context.user_data['ssn']}\n"
+    #     'ID Document: Saved as id_document.jpg'
+    # )
     return ConversationHandler.END
 
 # Define the cancel handler
@@ -96,10 +106,10 @@ def main() -> None:
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, name)],
-            ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, address)],
-            EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, email)],
-            SSN: [MessageHandler(filters.TEXT & ~filters.COMMAND, ssn)],
+            # NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, name)],
+            # ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, address)],
+            # EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, email)],
+            # SSN: [MessageHandler(filters.TEXT & ~filters.COMMAND, ssn)],
             ID_DOCUMENT: [MessageHandler(filters.PHOTO, id_document)]
         },
         fallbacks=[CommandHandler('cancel', cancel)],
