@@ -1,5 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, firestore, storage
+from datetime import datetime
 
 cred = credentials.Certificate('./credentials.json')
 firebase_admin.initialize_app(cred, {
@@ -11,8 +12,10 @@ db = firestore.client()
 bucket = storage.bucket()
 
 def create_new_account():
-    doc_ref = db.collection('accounts').add({})
-    print("New account created with id {0}.".format(doc_ref[1].id))
+    doc_ref = db.collection('accounts').add({
+        'created_at': datetime.now().isoformat()
+    })
+    print("New account created with id {0} at {1}.".format(doc_ref[1].id, datetime.now().isoformat()))
     return doc_ref[1].id
 
 def upload_file_to_storage(file_path, file_name):
@@ -45,6 +48,26 @@ def update_ssn(account_id, ssn):
 def update_id(account_id, file_url):
     db.collection('accounts').document(account_id).update({'id_': file_url})
     print("ID document image updated for account {0} at url {1}".format(account_id, file_url))
+
+def update_id_fields(account_id, fields):
+    id_fields = {
+        'idNumber': fields.get('idNumber', ''),
+        'name': fields.get('name', ''),
+        'birthdate': fields.get('birthdate', ''),
+        'sex': fields.get('sex', ''),
+        'address': fields.get('address', ''),
+        'electronicReplicaOfID': fields.get('electronicReplicaOfID', False),
+        'paperReplicaOfID': fields.get('paperReplicaOfID', False),
+        'pictureIsClear': fields.get('pictureIsClear', False),
+        'idImageIsTampered': fields.get('idImageIsTampered', False)
+    }
+    db.collection('accounts').document(account_id).update({'id_fields': id_fields})
+    print("ID fields updated for account {0}.".format(account_id))
+
+def update_adverse_media_check(account_id, has_adverse_media):
+    db.collection('accounts').document(account_id).update({'adverse_media_check': bool(has_adverse_media)})
+    print("Adverse media check updated for account {0} to {1}.".format(account_id, bool(has_adverse_media)))
+
 
 # Tests:
 # account_id = create_new_account()

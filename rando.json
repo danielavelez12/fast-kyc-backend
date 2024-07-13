@@ -1,4 +1,21 @@
 {
-    \
-    n "idNumber": "V420-160-00-941-0", \n "name": "Daniela Velez", \n "birthdate": "12/01/2000", \n "sex": "F", \n "address": "11488 NW 73RD MNR, Parkland, FL 33076-4252", \n "electronicReplicaOfID": false, \n "paperReplicaOfID": true, \n "pictureIsClear": true, \n "idImageIsTampered": false
+    "id": "chatcmpl-9kdn5LkBVXqlueSLVW4uwexluuKZk",
+    "object": "chat.completion",
+    "created": 1720903071,
+    "model": "gpt-4o-2024-05-13",
+    "choices": [{
+        "index": 0,
+        "message": {
+            "role": "assistant",
+            "content": "{\n    \"idNumber\": \"V420-160-00-941-0\",\n    \"name\": \"DANIEL VELEZ\",\n    \"birthdate\": \"12/01/2000\",\n    \"sex\": \"F\",\n    \"address\": \"11488 NW 73RD MNR, PARKLAND, FL 33076-4252\",\n    \"electronicReplicaOfID\": false,\n    \"paperReplicaOfID\": true,\n    \"pictureIsClear\": true,\n    \"idImageIsTampered\": false\n}"
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+    }],
+    "usage": {
+        "prompt_tokens": 843,
+        "completion_tokens": 113,
+        "total_tokens": 956
+    },
+    "system_fingerprint": "fp_298125635f"
 }
